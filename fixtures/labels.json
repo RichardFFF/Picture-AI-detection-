@@ -1,0 +1,15 @@
+{
+  "firefly_gen.jpg": "AI_GENERATED",
+  "genfill.jpg": "AI_MODIFIED",
+  "ps_edit.jpg": "EDITED_NO_AI",
+  "firefly_gen.png": "AI_GENERATED",
+  "genfill.png": "AI_MODIFIED",
+  "firefly_gen_xmp_only.jpg": "AI_GENERATED",
+  "genfill_xmp_only.jpg": "AI_MODIFIED",
+  "ps_edit_xmp_only.jpg": "EDITED_NO_AI",
+  "clean.jpg": "NO_AI_EVIDENCE",
+  "clean.png": "NO_AI_EVIDENCE",
+  "clean_exif.jpg": "NO_AI_EVIDENCE",
+  "stripped_ai.jpg": "NO_AI_EVIDENCE",
+  "clean_tricky_name_firefly.png": "NO_AI_EVIDENCE"
+}
