@@ -1,0 +1,82 @@
+{
+  "original/photo_c.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "ai_modified/photo_c_ai.jpg": {
+    "set": "ai_modified",
+    "expected": "AI_MODIFIED"
+  },
+  "original/photo_ca.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "ai_modified/photo_ca_ai.jpg": {
+    "set": "ai_modified",
+    "expected": "AI_MODIFIED"
+  },
+  "original/photo_cie_sig_ca.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "ai_modified/photo_cie_sig_ca_ai.jpg": {
+    "set": "ai_modified",
+    "expected": "AI_MODIFIED"
+  },
+  "original/photo_c_with_cawg_data.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "ai_modified/photo_c_with_cawg_data_ai.jpg": {
+    "set": "ai_modified",
+    "expected": "AI_GENERATED"
+  },
+  "original/scene_01.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "ai_modified/scene_01_ai.jpg": {
+    "set": "ai_modified",
+    "expected": "AI_MODIFIED"
+  },
+  "original/scene_02.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "ai_modified/scene_02_ai.jpg": {
+    "set": "ai_modified",
+    "expected": "AI_MODIFIED"
+  },
+  "original/scene_03.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "ai_modified/scene_03_ai.jpg": {
+    "set": "ai_modified",
+    "expected": "AI_MODIFIED"
+  },
+  "original/scene_04.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "ai_modified/scene_04_ai.jpg": {
+    "set": "ai_modified",
+    "expected": "AI_MODIFIED"
+  },
+  "original/scene_05.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "ai_modified/scene_05_ai.jpg": {
+    "set": "ai_modified",
+    "expected": "AI_GENERATED"
+  },
+  "original/scene_06.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "ai_modified/scene_06_ai.jpg": {
+    "set": "ai_modified",
+    "expected": "AI_MODIFIED"
+  }
+}

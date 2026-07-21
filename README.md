@@ -100,6 +100,23 @@ python -m pytest           # 56 tests incl. the same 100% gate + a no-c2pa-libra
 Current result: **Accuracy: 13/13 (100.0%)** — also holds with the c2pa
 library disabled (byte-level fallback path).
 
+### Paired sets: AI-modified vs original
+
+`python scripts/make_testset.py` builds `testset/original/` (10 clean images —
+real CAI photographs with provenance stripped, plus rendered scenes) and
+`testset/ai_modified/` (10 counterparts with real pixel edits and genuine
+Adobe-style provenance: signed C2PA Generative Fill manifests, Firefly-created
+manifests, and XMP-only variants). Score it with:
+
+```bash
+python evaluate_set.py            # per-file table + confusion matrix
+```
+
+Current result: **20/20 (100.0%)** — zero false positives, zero false
+negatives. `evaluate_set.py --ai-dir DIR --original-dir DIR` works on any two
+directories, so you can point it at your own Firefly/Photoshop exports and
+untouched photos.
+
 ### Real-world samples
 
 `python scripts/download_samples.py` fetches C2PA-signed sample images from the
