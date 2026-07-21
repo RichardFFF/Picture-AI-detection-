@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "claude/**"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Tests & accuracy gates (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run test suite
+        run: python -m pytest -v
+
+      - name: Fixture accuracy gate (must be 100%)
+        run: python run_evaluation.py
+
+      - name: Paired-set accuracy gate (must be 100%)
+        run: python evaluate_set.py
+
+      - name: CLI smoke test
+        run: python -m aidetect --json fixtures/firefly_gen.jpg
+
+  lint:
+    name: Lint (errors only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Check for syntax errors and undefined names
+        run: ruff check --select E9,F aidetect scripts tests run_evaluation.py evaluate_set.py
