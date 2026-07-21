@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 import tempfile
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import HTMLResponse
 
 from .detector import detect_file
@@ -48,6 +48,17 @@ metadata. Deterministic — no guessing.</p>
 <div id="drop">Drop an image here or click to choose a file
   <input id="file" type="file" accept="image/*" hidden>
 </div>
+<fieldset style="margin-top:.8rem;border:1px solid #8884;border-radius:8px;padding:.6rem .8rem;">
+  <legend style="font-size:.85rem;padding:0 .3rem;">Options</legend>
+  <label style="display:block;font-size:.9rem;margin:.2rem 0;">
+    <input type="checkbox" id="opt-heuristics">
+    Run heuristic pixel analysis — 3 tools: ELA, Spectral, NoiseMap (advisory only)
+  </label>
+  <label style="display:block;font-size:.9rem;margin:.2rem 0;">
+    <input type="checkbox" id="opt-durable">
+    Attempt durable-credential recovery (TrustMark watermark + Content Credentials Cloud)
+  </label>
+</fieldset>
 <div id="result"></div>
 <footer>Verdicts: AI_GENERATED (fully AI-created) &middot; AI_MODIFIED (AI edits
 such as Generative Fill) &middot; EDITED_NO_AI (edit provenance, no AI actions)
@@ -69,6 +80,8 @@ async function analyze(file) {
   result.innerHTML = "<p>Analyzing " + file.name + "…</p>";
   const body = new FormData();
   body.append("file", file);
+  body.append("heuristics", document.getElementById("opt-heuristics").checked);
+  body.append("durable", document.getElementById("opt-durable").checked);
   try {
     const resp = await fetch("/api/detect", { method: "POST", body });
     const data = await resp.json();
@@ -93,6 +106,19 @@ function render(name, r) {
     html += "</table>";
   }
   for (const n of r.notes) html += '<p class="note">Note: ' + esc(n) + "</p>";
+  if (r.heuristics) {
+    html += "<h3 style='margin-bottom:.3rem;'>Heuristic pixel analysis</h3>";
+    html += "<p class='note'>" + esc(r.heuristics.assessment) + "</p>";
+    for (const t of r.heuristics.tools) {
+      const pct = Math.round(t.score * 100);
+      html += "<div style='margin:.35rem 0;'><strong>" + esc(t.tool) + "</strong> — "
+            + pct + "%<div style='background:#8883;border-radius:4px;height:8px;'>"
+            + "<div style='width:" + pct + "%;height:8px;border-radius:4px;background:"
+            + (t.score > 0.5 ? "#e67e22" : "#27ae60") + ";'></div></div>"
+            + "<span class='note'>" + esc(t.summary) + "</span></div>";
+    }
+    html += "<p class='note'>" + esc(r.heuristics.disclaimer) + "</p>";
+  }
   html += "<details><summary>Raw JSON</summary><pre>" + esc(JSON.stringify(r, null, 2)) + "</pre></details>";
   result.innerHTML = html;
 }
@@ -107,16 +133,24 @@ async def index() -> str:
 
 
 @app.post("/api/detect")
-async def api_detect(file: UploadFile = File(...)) -> dict:
+async def api_detect(
+    file: UploadFile = File(...),
+    durable: bool = Form(False),
+    heuristics: bool = Form(False),
+) -> dict:
     suffix = os.path.splitext(file.filename or "upload")[1] or ".bin"
     data = await file.read()
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp.write(data)
         tmp_path = tmp.name
     try:
-        result = detect_file(tmp_path)
+        result = detect_file(tmp_path, durable=durable)
         payload = result.to_dict()
         payload["path"] = file.filename or "upload"
+        if heuristics:
+            from .heuristics import run_heuristics
+
+            payload["heuristics"] = run_heuristics(tmp_path)
         return payload
     finally:
         os.unlink(tmp_path)

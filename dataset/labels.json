@@ -1,0 +1,72 @@
+{
+  "original/crop_c.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "original/crop_ca.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "original/crop_cie_sig_ca.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "original/crop_c_with_cawg_data.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "original/render_01.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "original/render_02.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "original/render_03.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "original/render_04.jpg": {
+    "set": "original",
+    "expected": "NO_AI_EVIDENCE"
+  },
+  "ai/ai_00_firefly.jpg": {
+    "set": "ai",
+    "expected": "AI_GENERATED"
+  },
+  "ai/ai_01_firefly_png.png": {
+    "set": "ai",
+    "expected": "AI_GENERATED"
+  },
+  "ai/ai_02_genfill.jpg": {
+    "set": "ai",
+    "expected": "AI_MODIFIED"
+  },
+  "ai/ai_03_genfill.jpg": {
+    "set": "ai",
+    "expected": "AI_MODIFIED"
+  },
+  "ai/ai_04_genfill_png.png": {
+    "set": "ai",
+    "expected": "AI_MODIFIED"
+  },
+  "ai/ai_05_genfill.jpg": {
+    "set": "ai",
+    "expected": "AI_MODIFIED"
+  },
+  "ai/ai_06_xmp.jpg": {
+    "set": "ai",
+    "expected": "AI_MODIFIED"
+  },
+  "ai/ai_07_xmp_gen.jpg": {
+    "set": "ai",
+    "expected": "AI_GENERATED"
+  },
+  "special/stripped_recoverable.jpg": {
+    "set": "special",
+    "expected": "NO_AI_EVIDENCE",
+    "expected_with_cloud": "AI_GENERATED",
+    "soft_binding_id": "A7X9QK2M"
+  }
+}

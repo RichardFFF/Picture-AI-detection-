@@ -159,15 +159,38 @@ def detect_bytes(data: bytes, path: str = "<bytes>",
     )
 
 
-def detect_file(path: str | Path) -> DetectionResult:
-    """Classify an image file on disk."""
+def detect_file(path: str | Path, durable: bool = False) -> DetectionResult:
+    """Classify an image file on disk.
+
+    With durable=True, an image with no embedded provenance is additionally
+    checked for a durable credential: TrustMark watermark decode followed by
+    a Content Credentials Cloud manifest lookup (see aidetect.softbinding).
+    """
     path = str(path)
     data = Path(path).read_bytes()
     store, state = c2pa_reader.read_manifest_store(path)
-    return detect_bytes(
+    result = detect_bytes(
         data,
         path=path,
         store=store,
         validation_state=state,
         c2pa_checked=c2pa_reader.library_available(),
     )
+
+    if durable and not result.evidence:
+        from . import softbinding
+
+        cloud_store, notes = softbinding.recover_credentials(path)
+        result.notes.extend(notes)
+        if cloud_store:
+            cloud_evidence = _c2pa_evidence(cloud_store)
+            for ev in cloud_evidence:
+                ev.source = "c2pa-cloud"
+            result.evidence.extend(cloud_evidence)
+            if cloud_evidence:
+                result.verdict = max(
+                    (e.implies for e in cloud_evidence),
+                    key=lambda v: SEVERITY[v],
+                )
+                result.c2pa_manifest_present = True
+    return result

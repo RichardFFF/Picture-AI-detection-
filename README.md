@@ -47,6 +47,42 @@ fabricating a verdict.
 4. **Merge** — the final verdict is the highest-severity verdict implied by any
    evidence; every matched signal is reported back to the user as evidence.
 
+### Durable credentials (TrustMark + Content Credentials Cloud)
+
+Adobe's *durable* Content Credentials survive metadata stripping: an invisible
+**TrustMark watermark** carries a soft-binding ID that the **Content
+Credentials Cloud** can resolve back to the original manifest. With
+`--durable` (CLI) or the UI checkbox, images that carry no embedded
+provenance go through this recovery path (`aidetect/softbinding.py`):
+
+1. decode the TrustMark watermark (optional `pip install trustmark`; model
+   weights download from Adobe on first use),
+2. query the manifest-recovery endpoint (defaults to Adobe's
+   `cai-manifests.adobe.com`; override with `AIDETECT_CC_CLOUD_ENDPOINT`),
+3. classify the recovered manifest exactly like an embedded one (evidence
+   source `c2pa-cloud`).
+
+Every unavailable step degrades to an explanatory note — the verdict is never
+guessed. The full recovery path (cloud query → manifest classification) is
+exercised in `tests/test_softbinding.py` against a real local HTTP server
+serving `dataset/cloud_store/`.
+
+### Heuristic pixel analysis (3 advisory tools)
+
+`--heuristics` (CLI) or the UI checkbox runs three classic pixel-forensics
+tools (`aidetect/heuristics.py`) — **advisory only**, never part of the
+deterministic verdict:
+
+| Tool | What it looks for |
+|---|---|
+| **ELA** (Error Level Analysis) | recompression residuals that differ across regions — splices/local regeneration |
+| **Spectral** (FFT) | periodic peaks and unnaturally clean high-frequency bands typical of generative upsamplers |
+| **NoiseMap** | missing/uneven sensor noise floor — synthesized or inpainted patches |
+
+Each returns a 0–1 score with an explanation; ≥2 flags ⇒ "heuristics lean
+toward AI". These are statistical signals that can be wrong in both
+directions, which is exactly why the provenance verdict stays separate.
+
 ## Quick start
 
 ```bash
@@ -55,6 +91,7 @@ pip install -r requirements.txt
 # CLI
 python -m aidetect fixtures/firefly_gen.jpg fixtures/clean.jpg
 python -m aidetect --json fixtures/*.jpg
+python -m aidetect --heuristics --durable dataset/special/stripped_recoverable.jpg
 
 # Web UI (drag & drop)
 uvicorn aidetect.webapp:app --port 8000   # then open http://localhost:8000
@@ -119,6 +156,21 @@ Current result: **20/20 (100.0%)** — zero false positives, zero false
 negatives. `evaluate_set.py --ai-dir DIR --original-dir DIR` works on any two
 directories, so you can point it at your own Firefly/Photoshop exports and
 untouched photos.
+
+### The `dataset/` evaluation set
+
+`python scripts/make_dataset.py` builds a second, independent set: 8 originals
+(fresh crops of the real CAI photographs + new renders), 8 AI images (signed
+Firefly creations and Generative Fill composites in JPEG *and* PNG, plus
+XMP-only variants), and `dataset/special/stripped_recoverable.jpg` — an AI
+image with stripped metadata whose manifest lives in `dataset/cloud_store/`,
+demonstrating durable-credential recovery. Score it with:
+
+```bash
+python evaluate_set.py --ai-dir dataset/ai --original-dir dataset/original
+```
+
+Current result: **16/16 (100.0%)**.
 
 ### Real-world samples
 
