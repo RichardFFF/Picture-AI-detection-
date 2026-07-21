@@ -73,7 +73,7 @@ def main() -> int:
     total = len(rows)
     correct = tp + tn
     print("\nConfusion matrix (positive = AI):")
-    print(f"                 predicted AI   predicted not-AI")
+    print("                 predicted AI   predicted not-AI")
     print(f"  actually AI    {tp:>12}   {fn:>16}")
     print(f"  actually orig  {fp:>12}   {tn:>16}")
     print(f"\nAccuracy: {correct}/{total} ({100.0 * correct / total:.1f}%)")

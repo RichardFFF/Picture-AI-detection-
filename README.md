@@ -100,6 +100,9 @@ python -m pytest           # 56 tests incl. the same 100% gate + a no-c2pa-libra
 Current result: **Accuracy: 13/13 (100.0%)** — also holds with the c2pa
 library disabled (byte-level fallback path).
 
+CI (`.github/workflows/ci.yml`) runs the full suite, both accuracy gates, and
+a lint pass on every push and pull request.
+
 ### Paired sets: AI-modified vs original
 
 `python scripts/make_testset.py` builds `testset/original/` (10 clean images —
