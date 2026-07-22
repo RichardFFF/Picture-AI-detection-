@@ -58,14 +58,23 @@ def _linear_scores(mj: dict, X: np.ndarray) -> np.ndarray:
     return ((X - mean) / std) @ np.asarray(mj["coef"]) + mj["intercept"]
 
 
-def _raw_scores(model: dict, X: np.ndarray) -> np.ndarray:
-    per_model = []
+def _sigmoid(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
+
+def tile_probs(model: dict, X: np.ndarray) -> np.ndarray:
+    """Per-tile ensemble probability: each head's (bag-mean) raw score is
+    Platt-calibrated with its own coefficients, then heads are averaged."""
+    heads: dict[str, dict] = {}
     for mj in model["models"]:
-        if mj["type"] == "gb":
-            per_model.append(_gb_scores(mj, X))
-        else:
-            per_model.append(_linear_scores(mj, X))
-    return np.mean(per_model, axis=0)
+        h = heads.setdefault(mj["type"], {"scores": [], "cal": mj["calibration"]})
+        h["scores"].append(_gb_scores(mj, X) if mj["type"] == "gb"
+                           else _linear_scores(mj, X))
+    head_probs = []
+    for h in heads.values():
+        s = np.mean(h["scores"], axis=0)
+        head_probs.append(_sigmoid(h["cal"]["a"] * s + h["cal"]["b"]))
+    return np.mean(head_probs, axis=0)
 
 
 def _tile_matrix(path: str, model: dict) -> np.ndarray | None:
@@ -96,7 +105,7 @@ def ml_assess(path: str) -> dict:
             "note": "No trained model found — run scripts/build_corpus.py "
                     "and scripts/train_ml.py.",
         }
-    if model.get("schema") != 2:
+    if model.get("schema") != 3:
         return {"available": False,
                 "note": "ml_model.json has an unsupported schema — retrain "
                         "with scripts/train_ml.py."}
@@ -110,9 +119,7 @@ def ml_assess(path: str) -> dict:
         }
     assert X.shape[1] == len(FEATURE_NAMES) + model["n_embedding_features"]
 
-    score = _trimmed_mean(_raw_scores(model, X))
-    cal = model["calibration"]
-    prob = float(1.0 / (1.0 + np.exp(-(cal["a"] * score + cal["b"]))))
+    prob = _trimmed_mean(tile_probs(model, X))
 
     threshold = model["threshold"]
     lo, hi = model["threshold_lo"], model["threshold_hi"]

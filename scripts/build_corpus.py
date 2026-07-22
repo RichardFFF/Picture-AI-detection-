@@ -47,6 +47,9 @@ AI_SOURCES = {
     "sd_img2img_mountains2": f"{SD}/stable-samples/img2img/mountains-2.png",
     "sd_preview": f"{SD}/txt2img-preview.png",
     "sd_convsample": f"{SD}/txt2img-convsample.png",
+    "sd_sample_2025": f"{SD}/stable-samples/txt2img/000002025.png",
+    "sd_sample_2035": f"{SD}/stable-samples/txt2img/000002035.png",
+    "sd_variants": f"{SD}/v1-variants-scores.jpg",
     "ld_birdhouse": "https://raw.githubusercontent.com/CompVis/latent-diffusion/main/assets/birdhouse.png",
     # lllyasviel/ControlNet (Apache-2.0): result collages dominated by
     # generated outputs; conditioning inputs filtered in tiles_from
@@ -83,6 +86,12 @@ REAL_SOURCES = {
     "tv_hopper": f"{TV}/test/assets/encode_jpeg/grace_hopper_517x606.jpg",
     # xinntao/Real-ESRGAN inputs (BSD-3); ADE20K-derived input excluded
     "esr_0014": f"{ESR}/0014.jpg",
+    "esr_00003": f"{ESR}/00003.png",
+    "esr_wolf": f"{ESR}/wolf_gray.jpg",
+    "esr_children": f"{ESR}/children-alpha.png",
+    "cv_imagetextn": f"{CV}/imageTextN.png",
+    "cv_ela_original": f"{CV}/ela_original.jpg",
+    "cv_basketball": f"{CV}/basketball1.png",
     # scikit-image data (BSD-3 repo; several NASA public-domain images)
     "ski_astronaut": f"{SKI}/astronaut.png",
     "ski_chelsea": f"{SKI}/chelsea.png",

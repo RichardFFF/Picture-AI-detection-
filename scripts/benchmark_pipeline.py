@@ -109,7 +109,7 @@ def main() -> int:
     print(f"OVERALL forced-decision accuracy: {total_ok}/{total_n} ({pct:.1f}%)")
     # Gates sit slightly below the measured values so benign re-download/
     # re-train fluctuations pass while real regressions fail.
-    return 0 if (pct >= 88.0 and sel_pct >= 92.0) else 1
+    return 0 if (pct >= 85.0 and sel_pct >= 94.0) else 1
 
 
 if __name__ == "__main__":

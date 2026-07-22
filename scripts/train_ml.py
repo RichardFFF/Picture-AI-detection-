@@ -160,6 +160,10 @@ def main() -> int:
     gkf = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=SEED)
     folds = list(gkf.split(X, y, groups))
 
+    # Both heads always contribute (winner-take-all selection proved too
+    # noisy with ~70 image-level CV points): each head is Platt-calibrated
+    # on its own out-of-fold image scores, and the shipped probability is
+    # the mean of the calibrated heads.
     results = {}
     for kind in ("linear", "gb"):
         oof_img: list[tuple[float, int, str]] = []
@@ -178,22 +182,32 @@ def main() -> int:
         img_acc = float(((img_s >= 0) == img_t).mean())
         bal = 0.5 * (((img_s >= 0) & (img_t == 1)).sum() / max(1, img_t.sum())
                      + ((img_s < 0) & (img_t == 0)).sum() / max(1, (1 - img_t).sum()))
+        a, b = fit_platt(img_s, img_t)
         print(f"{kind}: tile CV {np.mean(tile_accs):.3f} "
-              f"(folds {', '.join(f'{a:.3f}' for a in tile_accs)}), "
+              f"(folds {', '.join(f'{a2:.3f}' for a2 in tile_accs)}), "
               f"image CV {img_acc:.3f}, balanced {bal:.3f}")
         results[kind] = {"tile": float(np.mean(tile_accs)), "img": img_acc,
-                         "bal": float(bal), "oof": oof_img,
+                         "bal": float(bal), "oof": oof_img, "platt": (a, b),
                          "folds": tile_accs, "worst_te": worst[1]}
 
-    kind = max(results, key=lambda k: results[k]["bal"])
-    res = results[kind]
-    print(f"\nselected head: {kind}")
-
-    # ---- calibration on pooled out-of-fold image scores
-    img_s = np.array([s for s, _, _ in res["oof"]])
-    img_t = np.array([t for _, t, _ in res["oof"]])
-    a, b = fit_platt(img_s, img_t)
-    p_cal = sigmoid(a * img_s + b)
+    # ---- ensemble out-of-fold probabilities (heads calibrated separately,
+    # matched by image group)
+    by_group: dict[str, dict] = {}
+    for kind in ("linear", "gb"):
+        a, b = results[kind]["platt"]
+        for s, t, g in results[kind]["oof"]:
+            e = by_group.setdefault(g, {"t": t, "p": []})
+            e["p"].append(float(sigmoid(a * s + b)))
+    p_cal = np.array([float(np.mean(e["p"])) for e in by_group.values()])
+    img_t = np.array([e["t"] for e in by_group.values()])
+    ens_acc = float(((p_cal >= 0.5) == img_t).mean())
+    ens_bal = 0.5 * (((p_cal >= 0.5) & (img_t == 1)).sum() / max(1, img_t.sum())
+                     + ((p_cal < 0.5) & (img_t == 0)).sum()
+                     / max(1, (1 - img_t).sum()))
+    print(f"ensemble: image CV {ens_acc:.3f}, balanced {ens_bal:.3f}")
+    res = {"tile": float(np.mean([results[k]["tile"] for k in results])),
+           "img": ens_acc, "bal": float(ens_bal),
+           "worst_te": results["gb"]["worst_te"]}
 
     # ---- forced threshold (balanced) + selective bands on calibrated probs
     best_thr, best_bal = 0.5, 0.0
@@ -230,38 +244,42 @@ def main() -> int:
           f"selective band [{lo:.2f}, {hi:.2f}] -> selective accuracy "
           f"{sel_acc:.3f} at coverage {best_cov:.2f}")
 
-    # ---- final model on all data
+    # ---- final models on all data: calibrated linear head + calibrated
+    # 3-seed GB bag, probabilities averaged at inference
     models_json = []
-    if kind == "gb":
-        for seed in (SEED, SEED + 1, SEED + 2):
-            head = fit_head("gb", X, y, seed=seed)
-            mj = export_gb_trees(head["clf"])
-            raw = head["clf"].decision_function(X)
-            mj["baseline"] = float(np.mean(raw - json_gb_scores(mj, X)))
-            err = np.abs(json_gb_scores(mj, X) - raw).max()
-            assert err < 1e-8, f"JSON export mismatch: {err}"
-            models_json.append(mj)
-    else:
-        head = fit_head("linear", X, y)
-        mj = {"type": "linear",
-              "coef": head["clf"].coef_[0].tolist(),
-              "intercept": float(head["clf"].intercept_[0]),
-              "scaler_mean": head["mean"].tolist(),
-              "scaler_std": head["std"].tolist()}
-        check = ((X - head["mean"]) / head["std"]) @ np.array(mj["coef"]) + mj["intercept"]
-        err = np.abs(check - head_scores(head, X)).max()
-        assert err < 1e-6, f"JSON export mismatch: {err}"
+
+    head = fit_head("linear", X, y)
+    a_lin, b_lin = results["linear"]["platt"]
+    mj = {"type": "linear",
+          "coef": head["clf"].coef_[0].tolist(),
+          "intercept": float(head["clf"].intercept_[0]),
+          "scaler_mean": head["mean"].tolist(),
+          "scaler_std": head["std"].tolist(),
+          "calibration": {"a": a_lin, "b": b_lin}}
+    check = ((X - head["mean"]) / head["std"]) @ np.array(mj["coef"]) + mj["intercept"]
+    err = np.abs(check - head_scores(head, X)).max()
+    assert err < 1e-6, f"JSON export mismatch: {err}"
+    models_json.append(mj)
+
+    a_gb, b_gb = results["gb"]["platt"]
+    for seed in (SEED, SEED + 1, SEED + 2):
+        head = fit_head("gb", X, y, seed=seed)
+        mj = export_gb_trees(head["clf"])
+        raw = head["clf"].decision_function(X)
+        mj["baseline"] = float(np.mean(raw - json_gb_scores(mj, X)))
+        err = np.abs(json_gb_scores(mj, X) - raw).max()
+        assert err < 1e-8, f"JSON export mismatch: {err}"
+        mj["calibration"] = {"a": a_gb, "b": b_gb}
         models_json.append(mj)
     print(f"JSON export verified for {len(models_json)} model(s)")
 
     model = {
-        "schema": 2,
-        "head": kind,
+        "schema": 3,
+        "head": "ensemble(linear+gb)",
         "n_forensic_features": len(FEATURE_NAMES),
         "n_embedding_features": int(n_emb),
         "feature_names": FEATURE_NAMES,
         "models": models_json,
-        "calibration": {"a": a, "b": b},
         "threshold": round(best_thr, 2),
         "threshold_lo": round(lo, 2),
         "threshold_hi": round(hi, 2),

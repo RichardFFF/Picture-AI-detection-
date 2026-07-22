@@ -96,8 +96,9 @@ classified deterministically — for those the optional **ML layer**
 probability. Architecture: **ImageNet transfer learning** — 512-d embeddings
 from the open-source ResNet18 backbone (ONNX Model Zoo, Apache-2.0;
 `scripts/fetch_backbone.py`, `aidetect/embeddings.py`) concatenated with 76
-forensic pixel features (`aidetect/features.py`), classified by a 3-seed bag
-of gradient-boosted trees with Platt calibration. Training data comes only
+forensic pixel features (`aidetect/features.py`), classified by an ensemble
+of a calibrated logistic head and a calibrated 3-seed bag of
+gradient-boosted trees (probabilities averaged). Training data comes only
 from permissively-licensed open-source repos (see `SOURCES.md`), built by
 `scripts/build_corpus.py`, trained by `scripts/train_ml.py` with group-aware
 5-fold cross-validation (tiles of one source image never span train/test).
@@ -114,11 +115,12 @@ comes from sources excluded from training):
 
 | Evaluation | Result |
 |---|---|
-| CV image-level balanced accuracy (grouped 5-fold) | 88.9% |
-| Full pipeline, forced decisions (56 images) | **91.1%** |
-| Full pipeline, selective mode | **94.0%** correct at 89% coverage |
+| CV image-level accuracy (grouped 5-fold, ensemble) | 86.1% |
+| CV selective accuracy / coverage | 97.2% / 50% |
+| Full pipeline, forced decisions (56 images) | **87.5%** |
+| Full pipeline, selective mode | **97.8%** correct at 80% coverage |
 | — provenance/metadata-decided images | 100% |
-| — ML-holdout pool (20 unseen photos/SD images), forced | 75.0% |
+| — ML-holdout pool (20 unseen photos/SD images), forced | 65.0% |
 
 Provenance and generator metadata decide deterministically wherever evidence
 exists; only evidence-free photographs fall through to the statistical
