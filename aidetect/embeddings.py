@@ -8,13 +8,18 @@ the model file is missing, callers fall back to forensic features only.
 """
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
 
-MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "resnet18-v1-7.onnx"
+_MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
+DEFAULT_BACKBONE = "resnet50-v2-7.onnx"
+MODEL_PATH = Path(os.environ.get(
+    "AIDETECT_BACKBONE", str(_MODELS_DIR / DEFAULT_BACKBONE)
+))
 
 _MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
 _STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)

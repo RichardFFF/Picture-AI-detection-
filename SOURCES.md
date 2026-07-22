@@ -18,7 +18,7 @@ photos, ADE20K-derived inputs).
 | [pytorch/vision](https://github.com/pytorch/vision) | BSD-3 | Real class (`dog1`, `grace_hopper`); benchmark holdout `dog2` |
 | [python-pillow/Pillow](https://github.com/python-pillow/Pillow) test images | MIT-CMU (HPND) | Benchmark holdout `flower` |
 | [xinntao/Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) inputs | BSD-3 (ADE20K-derived input excluded) | Real class (`0014`); benchmark holdout (`0030`) |
-| [onnx/models](https://github.com/onnx/models) | Apache-2.0 | `resnet18-v1-7.onnx` ImageNet backbone for transfer learning |
+| [onnx/models](https://github.com/onnx/models) | Apache-2.0 | `resnet50-v2-7.onnx` ImageNet backbone for transfer learning |
 | [adobe/trustmark](https://pypi.org/project/trustmark/) | MIT | Optional watermark decoding (durable credentials) |
 
 ## Commercial-use notes
@@ -27,7 +27,7 @@ photos, ADE20K-derived inputs).
   CreativeML Open RAIL-M also permits commercial use of the model subject to
   use restrictions, and disclaims rights over outputs (§6) — we only use
   outputs.
-- The ResNet18 weights are distributed by `onnx/models` under Apache-2.0.
+- The ResNet50 weights are distributed by `onnx/models` under Apache-2.0.
   As with all ImageNet-pretrained weights, the underlying training dataset
   (ImageNet) has research-oriented access terms; relying on the
   distributor's Apache-2.0 grant for the weights is standard industry

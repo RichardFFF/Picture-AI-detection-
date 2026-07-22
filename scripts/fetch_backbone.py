@@ -1,10 +1,10 @@
 """Download the open-source ImageNet backbone used for transfer learning.
 
-Model: ResNet18 v1.7 from the ONNX Model Zoo (github.com/onnx/models,
-Apache-2.0). The file is stored in the repo via git-LFS, so the actual bytes
-are served from media.githubusercontent.com.
+Models come from the ONNX Model Zoo (github.com/onnx/models, Apache-2.0);
+the files are stored via git-LFS, so the actual bytes are served from
+media.githubusercontent.com. Saved into models/ (gitignored).
 
-Saved to models/resnet18-v1-7.onnx (gitignored; ~45 MB).
+Usage: python scripts/fetch_backbone.py [resnet50|resnet18]  (default resnet50)
 """
 from __future__ import annotations
 
@@ -14,13 +14,19 @@ import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-DEST = REPO / "models" / "resnet18-v1-7.onnx"
 
-URL = ("https://media.githubusercontent.com/media/onnx/models/main/"
-       "validated/vision/classification/resnet/model/resnet18-v1-7.onnx")
+_ZOO = ("https://media.githubusercontent.com/media/onnx/models/main/"
+        "validated/vision/classification")
+BACKBONES = {
+    "resnet50": ("resnet50-v2-7.onnx", f"{_ZOO}/resnet/model/resnet50-v2-7.onnx"),
+    "resnet18": ("resnet18-v1-7.onnx", f"{_ZOO}/resnet/model/resnet18-v1-7.onnx"),
+}
 
 
 def main() -> int:
+    choice = sys.argv[1] if len(sys.argv) > 1 else "resnet50"
+    fname, URL = BACKBONES[choice]
+    DEST = REPO / "models" / fname
     DEST.parent.mkdir(exist_ok=True)
     if DEST.exists() and DEST.stat().st_size > 10_000_000:
         print(f"already present: {DEST} ({DEST.stat().st_size // 1_000_000} MB)")

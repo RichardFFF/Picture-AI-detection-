@@ -88,13 +88,13 @@ Each returns a 0–1 score with an explanation; ≥2 flags ⇒ "heuristics lean
 toward AI". These are statistical signals that can be wrong in both
 directions, which is exactly why the provenance verdict stays separate.
 
-### ML classifier for provenance-less images (transfer learning, ~91% forced / 94% selective)
+### ML classifier for provenance-less images (transfer learning, ~89% forced / ~98% selective)
 
 Images from generators that embed no metadata (or had it stripped) cannot be
 classified deterministically — for those the optional **ML layer**
 (`--ml` / UI checkbox, `aidetect/ml_detector.py`) reports a statistical AI
-probability. Architecture: **ImageNet transfer learning** — 512-d embeddings
-from the open-source ResNet18 backbone (ONNX Model Zoo, Apache-2.0;
+probability. Architecture: **ImageNet transfer learning** — 2048-d embeddings
+from the open-source ResNet50 backbone (ONNX Model Zoo, Apache-2.0;
 `scripts/fetch_backbone.py`, `aidetect/embeddings.py`) concatenated with 76
 forensic pixel features (`aidetect/features.py`), classified by an ensemble
 of a calibrated logistic head and a calibrated 3-seed bag of
@@ -115,12 +115,12 @@ comes from sources excluded from training):
 
 | Evaluation | Result |
 |---|---|
-| CV image-level accuracy (grouped 5-fold, ensemble) | 86.1% |
-| CV selective accuracy / coverage | 97.2% / 50% |
-| Full pipeline, forced decisions (56 images) | **87.5%** |
+| CV image-level accuracy (grouped 5-fold, ensemble) | 87.5% |
+| CV selective accuracy / coverage | 97.9% / 65% |
+| Full pipeline, forced decisions (56 images) | **89.3%** |
 | Full pipeline, selective mode | **97.8%** correct at 80% coverage |
 | — provenance/metadata-decided images | 100% |
-| — ML-holdout pool (20 unseen photos/SD images), forced | 65.0% |
+| — ML-holdout pool (20 unseen photos/SD images), forced | 70.0% |
 
 Provenance and generator metadata decide deterministically wherever evidence
 exists; only evidence-free photographs fall through to the statistical

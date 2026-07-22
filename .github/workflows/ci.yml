@@ -33,7 +33,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: models
-          key: backbone-resnet18-v1-7
+          key: backbone-resnet50-v2-7
 
       - name: Fetch ImageNet backbone
         run: python scripts/fetch_backbone.py
