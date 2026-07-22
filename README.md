@@ -44,7 +44,12 @@ fabricating a verdict.
    URIs and Firefly agent strings.
 3. **XMP pass** (`aidetect/xmp_scan.py`) — always runs; extracts XMP packets and
    matches `DigitalSourceType`, `CreatorTool`, and Firefly agent fields.
-4. **Merge** — the final verdict is the highest-severity verdict implied by any
+4. **Generator-metadata pass** (`aidetect/genai_metadata.py`) — always runs;
+   deterministically matches the metadata other AI generators embed:
+   Stable Diffusion WebUI `parameters` chunks (PNG and EXIF), ComfyUI
+   workflow graphs, NovelAI, InvokeAI, and Midjourney job metadata; C2PA
+   claim generators from OpenAI/DALL·E are matched in pass 1.
+5. **Merge** — the final verdict is the highest-severity verdict implied by any
    evidence; every matched signal is reported back to the user as evidence.
 
 ### Durable credentials (TrustMark + Content Credentials Cloud)
@@ -83,6 +88,40 @@ Each returns a 0–1 score with an explanation; ≥2 flags ⇒ "heuristics lean
 toward AI". These are statistical signals that can be wrong in both
 directions, which is exactly why the provenance verdict stays separate.
 
+### ML classifier for provenance-less images (~90% pipeline accuracy)
+
+Images from generators that embed no metadata (or had it stripped) cannot be
+classified deterministically — for those the optional **ML layer**
+(`--ml` / UI checkbox, `aidetect/ml_detector.py`) reports a statistical
+AI probability. It is gradient-boosted trees over 76 forensic pixel features
+(noise statistics and cross-channel correlation, FFT spectrum shape and
+latent-grid energy, gradients, saturation — `aidetect/features.py`), trained
+on a corpus of genuine Stable Diffusion / ControlNet outputs vs real
+photographs (BSDS500, OpenCV, CAI and other open datasets), built by
+`scripts/build_corpus.py` and trained by `scripts/train_ml.py` with
+group-aware 5-fold cross-validation (tiles of one source image never span
+train and test). The model ships as portable JSON (`aidetect/ml_model.json`)
+— no pickle, no torch needed at inference.
+
+**Measured results** (see `scripts/benchmark_pipeline.py`; the benchmark
+images come from sources excluded from training):
+
+| Evaluation | Result |
+|---|---|
+| CV tile-level accuracy (grouped 5-fold) | 83.2% |
+| CV image-level balanced accuracy | 89.0% |
+| Full pipeline on all test pools (58 images) | **89.7%** |
+| — provenance-decided images | 100% (57/57 across all layers' deterministic decisions) |
+| — ML-holdout pool (22 unseen photos/SD images) | 72.7% |
+
+The pipeline number is honest and reproducible: provenance and generator
+metadata decide deterministically wherever evidence exists; only
+evidence-free photographs fall through to the statistical model. A residual
+CNN was also trained (`scripts/train_cnn.py`) but underperformed the tree
+model (74.8% held-out) and is not shipped. **No statistical model can be
+100% accurate** — that is why this layer is separate, advisory, and reports
+a probability with its measured accuracy attached.
+
 ## Quick start
 
 ```bash
@@ -92,6 +131,8 @@ pip install -r requirements.txt
 python -m aidetect fixtures/firefly_gen.jpg fixtures/clean.jpg
 python -m aidetect --json fixtures/*.jpg
 python -m aidetect --heuristics --durable dataset/special/stripped_recoverable.jpg
+python -m aidetect --ml wild/ai_sd_txt2img_05.png   # statistical layer
+python scripts/benchmark_pipeline.py                # full-pipeline accuracy report
 
 # Web UI (drag & drop)
 uvicorn aidetect.webapp:app --port 8000   # then open http://localhost:8000

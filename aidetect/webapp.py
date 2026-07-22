@@ -58,6 +58,10 @@ metadata. Deterministic — no guessing.</p>
     <input type="checkbox" id="opt-durable">
     Attempt durable-credential recovery (TrustMark watermark + Content Credentials Cloud)
   </label>
+  <label style="display:block;font-size:.9rem;margin:.2rem 0;">
+    <input type="checkbox" id="opt-ml">
+    Run ML classifier — statistical AI probability for images without provenance
+  </label>
 </fieldset>
 <div id="result"></div>
 <footer>Verdicts: AI_GENERATED (fully AI-created) &middot; AI_MODIFIED (AI edits
@@ -82,6 +86,7 @@ async function analyze(file) {
   body.append("file", file);
   body.append("heuristics", document.getElementById("opt-heuristics").checked);
   body.append("durable", document.getElementById("opt-durable").checked);
+  body.append("ml", document.getElementById("opt-ml").checked);
   try {
     const resp = await fetch("/api/detect", { method: "POST", body });
     const data = await resp.json();
@@ -106,6 +111,16 @@ function render(name, r) {
     html += "</table>";
   }
   for (const n of r.notes) html += '<p class="note">Note: ' + esc(n) + "</p>";
+  if (r.ml && r.ml.available) {
+    const pct = Math.round(r.ml.probability_ai * 100);
+    html += "<h3 style='margin-bottom:.3rem;'>ML classifier</h3>";
+    html += "<div style='margin:.35rem 0;'><strong>P(AI) = " + pct + "%</strong> ("
+          + esc(r.ml.verdict_hint) + ")<div style='background:#8883;border-radius:4px;height:8px;'>"
+          + "<div style='width:" + pct + "%;height:8px;border-radius:4px;background:"
+          + (r.ml.probability_ai > 0.65 ? "#c0392b" : r.ml.probability_ai < 0.35 ? "#27ae60" : "#e67e22")
+          + ";'></div></div></div>";
+    html += "<p class='note'>" + esc(r.ml.accuracy_note) + "</p>";
+  }
   if (r.heuristics) {
     html += "<h3 style='margin-bottom:.3rem;'>Heuristic pixel analysis</h3>";
     html += "<p class='note'>" + esc(r.heuristics.assessment) + "</p>";
@@ -137,6 +152,7 @@ async def api_detect(
     file: UploadFile = File(...),
     durable: bool = Form(False),
     heuristics: bool = Form(False),
+    ml: bool = Form(False),
 ) -> dict:
     suffix = os.path.splitext(file.filename or "upload")[1] or ".bin"
     data = await file.read()
@@ -151,6 +167,10 @@ async def api_detect(
             from .heuristics import run_heuristics
 
             payload["heuristics"] = run_heuristics(tmp_path)
+        if ml:
+            from .ml_detector import ml_assess
+
+            payload["ml"] = ml_assess(tmp_path)
         return payload
     finally:
         os.unlink(tmp_path)

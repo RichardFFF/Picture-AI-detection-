@@ -41,6 +41,9 @@ jobs:
       - name: Dataset accuracy gate (must be 100%)
         run: python evaluate_set.py --ai-dir dataset/ai --original-dir dataset/original
 
+      - name: Full-pipeline benchmark (provenance + metadata + ML)
+        run: python scripts/benchmark_pipeline.py
+
       - name: CLI smoke test
         run: python -m aidetect --json fixtures/firefly_gen.jpg
 

@@ -24,6 +24,11 @@ def main(argv: list[str] | None = None) -> int:
         "--heuristics", action="store_true",
         help="also run the 3 advisory pixel-forensics tools (ELA, Spectral, NoiseMap)",
     )
+    parser.add_argument(
+        "--ml", action="store_true",
+        help="also run the trained ML classifier (statistical AI probability "
+             "for images without provenance metadata)",
+    )
     args = parser.parse_args(argv)
 
     payloads = []
@@ -40,6 +45,10 @@ def main(argv: list[str] | None = None) -> int:
             from .heuristics import run_heuristics
 
             payload["heuristics"] = run_heuristics(path)
+        if args.ml:
+            from .ml_detector import ml_assess
+
+            payload["ml"] = ml_assess(path)
         payloads.append((result, payload))
 
     if args.json:
@@ -57,6 +66,14 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"    heuristics ({heur['assessment']}):")
                 for tool in heur["tools"]:
                     print(f"    - {tool['tool']}: score {tool['score']:.2f} — {tool['summary']}")
+            ml = payload.get("ml")
+            if ml:
+                if ml.get("available"):
+                    print(f"    ml: P(AI) = {ml['probability_ai']:.2f} "
+                          f"[{ml['verdict_hint']}] "
+                          f"(components: {ml['components']})")
+                else:
+                    print(f"    ml: {ml['note']}")
 
     return 2 if had_error else 0
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import c2pa_reader, raw_scan, xmp_scan
+from . import c2pa_reader, genai_metadata, raw_scan, xmp_scan
 from .models import SEVERITY, DetectionResult, Evidence, Verdict
 
 TRAINED_URI_TAIL = "/trainedAlgorithmicMedia"
@@ -43,7 +43,9 @@ def _c2pa_evidence(store: dict) -> list[Evidence]:
             if isinstance(info, dict) and info.get("name"):
                 generators.append(str(info["name"]))
         for gen in generators:
-            if "Adobe Firefly" in gen:
+            if "Adobe Firefly" in gen or any(
+                marker in gen for marker in ("OpenAI", "ChatGPT", "DALL·E", "DALL-E")
+            ):
                 evidence.append(
                     Evidence("c2pa", "claim_generator", gen, Verdict.AI_GENERATED)
                 )
@@ -139,6 +141,7 @@ def detect_bytes(data: bytes, path: str = "<bytes>",
         evidence.extend(raw_evidence)
 
     evidence.extend(xmp_scan.scan_xmp(data))
+    evidence.extend(genai_metadata.scan_genai_metadata(data))
 
     if evidence:
         verdict = max((e.implies for e in evidence), key=lambda v: SEVERITY[v])
