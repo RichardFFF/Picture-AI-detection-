@@ -238,6 +238,12 @@ here) so you can try the detector on files signed by real tooling.
   state is surfaced in `notes`; chain-of-trust verification against the C2PA
   public trust list is not performed.
 
+## License
+
+MIT (see `LICENSE`). All dependencies, models, and bundled test images come
+from open-source projects whose licenses permit commercial use — the full
+per-source audit is in `SOURCES.md`.
+
 ## Project layout
 
 ```
