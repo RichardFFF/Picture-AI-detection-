@@ -263,6 +263,22 @@ the web UI accepts multi-file drops. Measured with
 | Metadata + ML classifier | ~486 | ~8 min |
 | Metadata + ML, 4 worker processes | ~195 | **~3 min 15 s** |
 
+## Key open-source libraries
+
+The libraries with the biggest impact on what this tool can do:
+
+| Library | Role | URL |
+|---|---|---|
+| **c2pa-python** (Content Authenticity Initiative) | Reading & signing C2PA Content Credentials — the core of deterministic detection | https://github.com/contentauth/c2pa-python |
+| **ONNX Runtime** | CPU inference of the ImageNet backbone for the ML layer | https://onnxruntime.ai |
+| **ONNX Model Zoo** | Source of the Apache-2.0 ResNet50 backbone weights | https://github.com/onnx/models |
+| **scikit-learn** | Training the classifier ensemble (logistic + gradient boosting) | https://scikit-learn.org |
+| **NumPy** | Forensic feature extraction (FFT, noise statistics) | https://numpy.org |
+| **Pillow** | Image decoding, tiling, fixture generation | https://github.com/python-pillow/Pillow |
+| **FastAPI** + **Uvicorn** | Web UI and API | https://fastapi.tiangolo.com · https://www.uvicorn.org |
+| **TrustMark** (Adobe) | Durable-credential watermark decoding (optional) | https://github.com/adobe/trustmark |
+| **pytest** | The 117-test quality gate | https://pytest.org |
+
 ## License
 
 MIT (see `LICENSE`). All dependencies, models, and bundled test images come
