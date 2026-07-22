@@ -113,11 +113,14 @@ function render(name, r) {
   for (const n of r.notes) html += '<p class="note">Note: ' + esc(n) + "</p>";
   if (r.ml && r.ml.available) {
     const pct = Math.round(r.ml.probability_ai * 100);
+    const conf = r.ml.confident_decision;
+    const color = conf === "ai" ? "#c0392b" : conf === "not_ai" ? "#27ae60" : "#7f8c8d";
     html += "<h3 style='margin-bottom:.3rem;'>ML classifier</h3>";
-    html += "<div style='margin:.35rem 0;'><strong>P(AI) = " + pct + "%</strong> ("
-          + esc(r.ml.verdict_hint) + ")<div style='background:#8883;border-radius:4px;height:8px;'>"
-          + "<div style='width:" + pct + "%;height:8px;border-radius:4px;background:"
-          + (r.ml.probability_ai > 0.65 ? "#c0392b" : r.ml.probability_ai < 0.35 ? "#27ae60" : "#e67e22")
+    html += "<div style='margin:.35rem 0;'><strong>P(AI) = " + pct + "%</strong> — "
+          + "<span style='color:" + color + ";font-weight:600;'>"
+          + (conf === "uncertain" ? "UNCERTAIN (inside the no-commit band)" : conf.toUpperCase())
+          + "</span><div style='background:#8883;border-radius:4px;height:8px;'>"
+          + "<div style='width:" + pct + "%;height:8px;border-radius:4px;background:" + color
           + ";'></div></div></div>";
     html += "<p class='note'>" + esc(r.ml.accuracy_note) + "</p>";
   }

@@ -70,8 +70,9 @@ def main(argv: list[str] | None = None) -> int:
             if ml:
                 if ml.get("available"):
                     print(f"    ml: P(AI) = {ml['probability_ai']:.2f} "
-                          f"[{ml['verdict_hint']}] "
-                          f"(components: {ml['components']})")
+                          f"[{ml['confident_decision'].upper()}] "
+                          f"(band {ml['band']}, forced: "
+                          f"{'AI' if ml['decision'] else 'not AI'})")
                 else:
                     print(f"    ml: {ml['note']}")
 

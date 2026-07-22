@@ -1,15 +1,16 @@
 """Build the pipeline benchmark set (benchmark/) — ML-holdout images only.
 
-Every image here comes from a source that scripts/build_corpus.py EXCLUDES
-from ML training, so the pipeline (provenance -> generator metadata -> ML)
-is evaluated on genuinely unseen data:
+Every image comes from a source that scripts/build_corpus.py EXCLUDES from
+ML training, so the pipeline (provenance -> generator metadata -> ML) is
+evaluated on genuinely unseen data. All sources are permissively-licensed
+open-source repo assets (see SOURCES.md).
 
 - benchmark/ai/: individual samples sliced from SD's merged-0007 grid (each a
   standalone genuine AI image), mountains-3 (img2img), upscaling-out, plus
   three metadata-carrying AI images (A1111 / ComfyUI / EXIF variants built
   from held-out AI pixels).
-- benchmark/real/: 10 held-out BSDS photographs, Real-ESRGAN input 0030,
-  scikit-image coffee — saved byte-for-byte as downloaded.
+- benchmark/real/: the held-out real photographs (HOLDOUT_REAL_SOURCES),
+  saved byte-for-byte as downloaded.
 
 Writes benchmark/labels.json: relpath -> "ai" | "real".
 """
@@ -25,7 +26,7 @@ from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_corpus import BSDS, BSDS_HOLDOUT  # noqa: E402
+from build_corpus import HOLDOUT_REAL_SOURCES  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 BENCH = REPO / "benchmark"
@@ -100,23 +101,13 @@ def main() -> int:
         labels["ai/sd_meta_exif.jpg"] = "ai"
 
     # ---- real: held-out photographs, byte-for-byte
-    for bid in BSDS_HOLDOUT:
-        for split in ("test", "val", "train"):
-            raw = fetch_bytes(f"{BSDS}/{split}/{bid}.jpg")
-            if raw:
-                fname = f"bsds_{bid}.jpg"
-                (BENCH / "real" / fname).write_bytes(raw)
-                labels[f"real/{fname}"] = "real"
-                break
-
-    for name, url in [
-        ("esr_0030.jpg", "https://raw.githubusercontent.com/xinntao/Real-ESRGAN/master/inputs/0030.jpg"),
-        ("ski_coffee.png", "https://raw.githubusercontent.com/scikit-image/scikit-image/v0.19.3/skimage/data/coffee.png"),
-    ]:
+    for name, url in HOLDOUT_REAL_SOURCES.items():
         raw = fetch_bytes(url)
         if raw:
-            (BENCH / "real" / name).write_bytes(raw)
-            labels[f"real/{name}"] = "real"
+            ext = url.rsplit(".", 1)[-1].lower()
+            fname = f"{name}.{ext}"
+            (BENCH / "real" / fname).write_bytes(raw)
+            labels[f"real/{fname}"] = "real"
 
     (BENCH / "labels.json").write_text(json.dumps(labels, indent=2) + "\n")
     n_ai = sum(1 for v in labels.values() if v == "ai")

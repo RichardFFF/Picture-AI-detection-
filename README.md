@@ -88,39 +88,44 @@ Each returns a 0–1 score with an explanation; ≥2 flags ⇒ "heuristics lean
 toward AI". These are statistical signals that can be wrong in both
 directions, which is exactly why the provenance verdict stays separate.
 
-### ML classifier for provenance-less images (~90% pipeline accuracy)
+### ML classifier for provenance-less images (transfer learning, ~91% forced / 94% selective)
 
 Images from generators that embed no metadata (or had it stripped) cannot be
 classified deterministically — for those the optional **ML layer**
-(`--ml` / UI checkbox, `aidetect/ml_detector.py`) reports a statistical
-AI probability. It is gradient-boosted trees over 76 forensic pixel features
-(noise statistics and cross-channel correlation, FFT spectrum shape and
-latent-grid energy, gradients, saturation — `aidetect/features.py`), trained
-on a corpus of genuine Stable Diffusion / ControlNet outputs vs real
-photographs (BSDS500, OpenCV, CAI and other open datasets), built by
-`scripts/build_corpus.py` and trained by `scripts/train_ml.py` with
-group-aware 5-fold cross-validation (tiles of one source image never span
-train and test). The model ships as portable JSON (`aidetect/ml_model.json`)
-— no pickle, no torch needed at inference.
+(`--ml` / UI checkbox, `aidetect/ml_detector.py`) reports a statistical AI
+probability. Architecture: **ImageNet transfer learning** — 512-d embeddings
+from the open-source ResNet18 backbone (ONNX Model Zoo, Apache-2.0;
+`scripts/fetch_backbone.py`, `aidetect/embeddings.py`) concatenated with 76
+forensic pixel features (`aidetect/features.py`), classified by a 3-seed bag
+of gradient-boosted trees with Platt calibration. Training data comes only
+from permissively-licensed open-source repos (see `SOURCES.md`), built by
+`scripts/build_corpus.py`, trained by `scripts/train_ml.py` with group-aware
+5-fold cross-validation (tiles of one source image never span train/test).
+The model ships as portable JSON — no pickle, no torch.
 
-**Measured results** (see `scripts/benchmark_pipeline.py`; the benchmark
-images come from sources excluded from training):
+The classifier has **two decision modes**:
+- **forced** — always answers at the calibrated threshold;
+- **selective** — commits only when the calibrated probability is outside
+  the cross-validation-chosen uncertainty band, otherwise answers
+  `UNCERTAIN`. Committed decisions are substantially more reliable.
+
+**Measured results** (`scripts/benchmark_pipeline.py`; every benchmark image
+comes from sources excluded from training):
 
 | Evaluation | Result |
 |---|---|
-| CV tile-level accuracy (grouped 5-fold) | 83.2% |
-| CV image-level balanced accuracy | 89.0% |
-| Full pipeline on all test pools (58 images) | **89.7%** |
-| — provenance-decided images | 100% (57/57 across all layers' deterministic decisions) |
-| — ML-holdout pool (22 unseen photos/SD images) | 72.7% |
+| CV image-level balanced accuracy (grouped 5-fold) | 88.9% |
+| Full pipeline, forced decisions (56 images) | **91.1%** |
+| Full pipeline, selective mode | **94.0%** correct at 89% coverage |
+| — provenance/metadata-decided images | 100% |
+| — ML-holdout pool (20 unseen photos/SD images), forced | 75.0% |
 
-The pipeline number is honest and reproducible: provenance and generator
-metadata decide deterministically wherever evidence exists; only
-evidence-free photographs fall through to the statistical model. A residual
-CNN was also trained (`scripts/train_cnn.py`) but underperformed the tree
-model (74.8% held-out) and is not shipped. **No statistical model can be
-100% accurate** — that is why this layer is separate, advisory, and reports
-a probability with its measured accuracy attached.
+Provenance and generator metadata decide deterministically wherever evidence
+exists; only evidence-free photographs fall through to the statistical
+model. A residual CNN (`scripts/train_cnn.py`) underperformed and is not
+shipped. **No statistical model can be 100% accurate** — this layer is
+separate, advisory, reports a probability, and says `UNCERTAIN` rather than
+guessing when the evidence is thin.
 
 ## Quick start
 

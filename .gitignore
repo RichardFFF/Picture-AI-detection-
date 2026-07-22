@@ -4,4 +4,5 @@ __pycache__/
 fixtures/external/
 wild/
 corpus/
+models/
 .venv/
