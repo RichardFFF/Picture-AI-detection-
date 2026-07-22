@@ -1,0 +1,3 @@
+# Extra dependencies for (re)training the ML models — not needed at inference
+scikit-learn>=1.4
+# optional CNN experiment: trustmark pulls in torch, or install torch directly

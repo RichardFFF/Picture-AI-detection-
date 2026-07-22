@@ -2,4 +2,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 fixtures/external/
+wild/
+corpus/
 .venv/

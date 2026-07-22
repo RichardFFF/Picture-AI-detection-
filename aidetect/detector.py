@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import c2pa_reader, raw_scan, xmp_scan
+from . import c2pa_reader, genai_metadata, raw_scan, xmp_scan
 from .models import SEVERITY, DetectionResult, Evidence, Verdict
 
 TRAINED_URI_TAIL = "/trainedAlgorithmicMedia"
@@ -43,7 +43,9 @@ def _c2pa_evidence(store: dict) -> list[Evidence]:
             if isinstance(info, dict) and info.get("name"):
                 generators.append(str(info["name"]))
         for gen in generators:
-            if "Adobe Firefly" in gen:
+            if "Adobe Firefly" in gen or any(
+                marker in gen for marker in ("OpenAI", "ChatGPT", "DALL·E", "DALL-E")
+            ):
                 evidence.append(
                     Evidence("c2pa", "claim_generator", gen, Verdict.AI_GENERATED)
                 )
@@ -139,6 +141,7 @@ def detect_bytes(data: bytes, path: str = "<bytes>",
         evidence.extend(raw_evidence)
 
     evidence.extend(xmp_scan.scan_xmp(data))
+    evidence.extend(genai_metadata.scan_genai_metadata(data))
 
     if evidence:
         verdict = max((e.implies for e in evidence), key=lambda v: SEVERITY[v])
@@ -159,15 +162,38 @@ def detect_bytes(data: bytes, path: str = "<bytes>",
     )
 
 
-def detect_file(path: str | Path) -> DetectionResult:
-    """Classify an image file on disk."""
+def detect_file(path: str | Path, durable: bool = False) -> DetectionResult:
+    """Classify an image file on disk.
+
+    With durable=True, an image with no embedded provenance is additionally
+    checked for a durable credential: TrustMark watermark decode followed by
+    a Content Credentials Cloud manifest lookup (see aidetect.softbinding).
+    """
     path = str(path)
     data = Path(path).read_bytes()
     store, state = c2pa_reader.read_manifest_store(path)
-    return detect_bytes(
+    result = detect_bytes(
         data,
         path=path,
         store=store,
         validation_state=state,
         c2pa_checked=c2pa_reader.library_available(),
     )
+
+    if durable and not result.evidence:
+        from . import softbinding
+
+        cloud_store, notes = softbinding.recover_credentials(path)
+        result.notes.extend(notes)
+        if cloud_store:
+            cloud_evidence = _c2pa_evidence(cloud_store)
+            for ev in cloud_evidence:
+                ev.source = "c2pa-cloud"
+            result.evidence.extend(cloud_evidence)
+            if cloud_evidence:
+                result.verdict = max(
+                    (e.implies for e in cloud_evidence),
+                    key=lambda v: SEVERITY[v],
+                )
+                result.c2pa_manifest_present = True
+    return result

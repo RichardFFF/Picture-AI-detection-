@@ -1,5 +1,6 @@
 c2pa-python==0.37.0
 Pillow>=10.0
+numpy>=1.24
 fastapi>=0.110
 uvicorn>=0.29
 python-multipart>=0.0.9

@@ -44,8 +44,83 @@ fabricating a verdict.
    URIs and Firefly agent strings.
 3. **XMP pass** (`aidetect/xmp_scan.py`) — always runs; extracts XMP packets and
    matches `DigitalSourceType`, `CreatorTool`, and Firefly agent fields.
-4. **Merge** — the final verdict is the highest-severity verdict implied by any
+4. **Generator-metadata pass** (`aidetect/genai_metadata.py`) — always runs;
+   deterministically matches the metadata other AI generators embed:
+   Stable Diffusion WebUI `parameters` chunks (PNG and EXIF), ComfyUI
+   workflow graphs, NovelAI, InvokeAI, and Midjourney job metadata; C2PA
+   claim generators from OpenAI/DALL·E are matched in pass 1.
+5. **Merge** — the final verdict is the highest-severity verdict implied by any
    evidence; every matched signal is reported back to the user as evidence.
+
+### Durable credentials (TrustMark + Content Credentials Cloud)
+
+Adobe's *durable* Content Credentials survive metadata stripping: an invisible
+**TrustMark watermark** carries a soft-binding ID that the **Content
+Credentials Cloud** can resolve back to the original manifest. With
+`--durable` (CLI) or the UI checkbox, images that carry no embedded
+provenance go through this recovery path (`aidetect/softbinding.py`):
+
+1. decode the TrustMark watermark (optional `pip install trustmark`; model
+   weights download from Adobe on first use),
+2. query the manifest-recovery endpoint (defaults to Adobe's
+   `cai-manifests.adobe.com`; override with `AIDETECT_CC_CLOUD_ENDPOINT`),
+3. classify the recovered manifest exactly like an embedded one (evidence
+   source `c2pa-cloud`).
+
+Every unavailable step degrades to an explanatory note — the verdict is never
+guessed. The full recovery path (cloud query → manifest classification) is
+exercised in `tests/test_softbinding.py` against a real local HTTP server
+serving `dataset/cloud_store/`.
+
+### Heuristic pixel analysis (3 advisory tools)
+
+`--heuristics` (CLI) or the UI checkbox runs three classic pixel-forensics
+tools (`aidetect/heuristics.py`) — **advisory only**, never part of the
+deterministic verdict:
+
+| Tool | What it looks for |
+|---|---|
+| **ELA** (Error Level Analysis) | recompression residuals that differ across regions — splices/local regeneration |
+| **Spectral** (FFT) | periodic peaks and unnaturally clean high-frequency bands typical of generative upsamplers |
+| **NoiseMap** | missing/uneven sensor noise floor — synthesized or inpainted patches |
+
+Each returns a 0–1 score with an explanation; ≥2 flags ⇒ "heuristics lean
+toward AI". These are statistical signals that can be wrong in both
+directions, which is exactly why the provenance verdict stays separate.
+
+### ML classifier for provenance-less images (~90% pipeline accuracy)
+
+Images from generators that embed no metadata (or had it stripped) cannot be
+classified deterministically — for those the optional **ML layer**
+(`--ml` / UI checkbox, `aidetect/ml_detector.py`) reports a statistical
+AI probability. It is gradient-boosted trees over 76 forensic pixel features
+(noise statistics and cross-channel correlation, FFT spectrum shape and
+latent-grid energy, gradients, saturation — `aidetect/features.py`), trained
+on a corpus of genuine Stable Diffusion / ControlNet outputs vs real
+photographs (BSDS500, OpenCV, CAI and other open datasets), built by
+`scripts/build_corpus.py` and trained by `scripts/train_ml.py` with
+group-aware 5-fold cross-validation (tiles of one source image never span
+train and test). The model ships as portable JSON (`aidetect/ml_model.json`)
+— no pickle, no torch needed at inference.
+
+**Measured results** (see `scripts/benchmark_pipeline.py`; the benchmark
+images come from sources excluded from training):
+
+| Evaluation | Result |
+|---|---|
+| CV tile-level accuracy (grouped 5-fold) | 83.2% |
+| CV image-level balanced accuracy | 89.0% |
+| Full pipeline on all test pools (58 images) | **89.7%** |
+| — provenance-decided images | 100% (57/57 across all layers' deterministic decisions) |
+| — ML-holdout pool (22 unseen photos/SD images) | 72.7% |
+
+The pipeline number is honest and reproducible: provenance and generator
+metadata decide deterministically wherever evidence exists; only
+evidence-free photographs fall through to the statistical model. A residual
+CNN was also trained (`scripts/train_cnn.py`) but underperformed the tree
+model (74.8% held-out) and is not shipped. **No statistical model can be
+100% accurate** — that is why this layer is separate, advisory, and reports
+a probability with its measured accuracy attached.
 
 ## Quick start
 
@@ -55,6 +130,9 @@ pip install -r requirements.txt
 # CLI
 python -m aidetect fixtures/firefly_gen.jpg fixtures/clean.jpg
 python -m aidetect --json fixtures/*.jpg
+python -m aidetect --heuristics --durable dataset/special/stripped_recoverable.jpg
+python -m aidetect --ml wild/ai_sd_txt2img_05.png   # statistical layer
+python scripts/benchmark_pipeline.py                # full-pipeline accuracy report
 
 # Web UI (drag & drop)
 uvicorn aidetect.webapp:app --port 8000   # then open http://localhost:8000
@@ -119,6 +197,21 @@ Current result: **20/20 (100.0%)** — zero false positives, zero false
 negatives. `evaluate_set.py --ai-dir DIR --original-dir DIR` works on any two
 directories, so you can point it at your own Firefly/Photoshop exports and
 untouched photos.
+
+### The `dataset/` evaluation set
+
+`python scripts/make_dataset.py` builds a second, independent set: 8 originals
+(fresh crops of the real CAI photographs + new renders), 8 AI images (signed
+Firefly creations and Generative Fill composites in JPEG *and* PNG, plus
+XMP-only variants), and `dataset/special/stripped_recoverable.jpg` — an AI
+image with stripped metadata whose manifest lives in `dataset/cloud_store/`,
+demonstrating durable-credential recovery. Score it with:
+
+```bash
+python evaluate_set.py --ai-dir dataset/ai --original-dir dataset/original
+```
+
+Current result: **16/16 (100.0%)**.
 
 ### Real-world samples
 
