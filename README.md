@@ -1,18 +1,26 @@
-# Adobe AI Image Detector
+# AI Image Detector
 
-Detects pictures **created or modified with Adobe AI tools** — Adobe Firefly
-(text-to-image) and Photoshop's AI features (Generative Fill / Generative
-Expand) — by reading the provenance metadata those tools embed. Ships with a
-CLI, a drag-and-drop web UI, and a labeled test picture set on which it scores
-**100% accuracy** (`13/13`, verified by `run_evaluation.py` and the test suite).
+Identifies pictures **created or modified by AI** by reading the provenance
+metadata generators embed, with optional statistical analysis for images
+that carry none. Detected generator families:
 
-## How it works — and why it can be exact
+- **Adobe Firefly / Photoshop Generative Fill & Expand** — C2PA Content
+  Credentials + XMP (the flagship deterministic feature)
+- **OpenAI DALL·E / ChatGPT images** — C2PA claim generators
+- **Stable Diffusion WebUI, ComfyUI, NovelAI, InvokeAI, Midjourney** —
+  generator metadata (PNG chunks, EXIF, XMP)
+
+Ships with a CLI (single images or batch scans of whole directories), a
+drag-and-drop web UI with multi-file batches, and labeled test sets where
+the deterministic layers score **100%**.
+
+## How it works — and why metadata detection can be exact
 
 Statistical/pixel-based "AI detectors" guess, and guessing can never be 100%
-accurate. This app doesn't guess. Adobe Firefly and Photoshop's generative
-features embed **C2PA Content Credentials** — cryptographically signed
-provenance manifests — plus XMP metadata that explicitly declare AI
-involvement:
+accurate. The metadata layers of this app don't guess. Adobe Firefly and
+Photoshop's generative features embed **C2PA Content Credentials** —
+cryptographically signed provenance manifests — plus XMP metadata that
+explicitly declare AI involvement:
 
 - `digitalSourceType: …/trainedAlgorithmicMedia` (fully AI-generated)
 - `digitalSourceType: …/compositeWithTrainedAlgorithmicMedia` (AI composite, e.g. Generative Fill)
@@ -134,9 +142,10 @@ guessing when the evidence is thin.
 ```bash
 pip install -r requirements.txt
 
-# CLI
+# CLI — single images or batch scans (files and/or directories)
 python -m aidetect fixtures/firefly_gen.jpg fixtures/clean.jpg
 python -m aidetect --json fixtures/*.jpg
+python -m aidetect testset dataset --jobs 4 --csv scan_results.csv
 python -m aidetect --heuristics --durable dataset/special/stripped_recoverable.jpg
 python -m aidetect --ml wild/ai_sd_txt2img_05.png   # statistical layer
 python scripts/benchmark_pipeline.py                # full-pipeline accuracy report
@@ -239,6 +248,20 @@ here) so you can try the detector on files signed by real tooling.
 - **Trust**: verdicts reflect the *declared* manifest. Signature validation
   state is surfaced in `notes`; chain-of-trust verification against the C2PA
   public trust list is not performed.
+
+## Batch performance (measured on this machine, CPU-only)
+
+`python -m aidetect DIR --jobs N --csv out.csv` scans whole directories;
+the web UI accepts multi-file drops. Measured with
+`scripts/measure_throughput.py` over the committed test sets:
+
+| Mode | ms / image | 1,000 images |
+|---|---|---|
+| Metadata layers only (deterministic) | ~16 | **~16 s** |
+| Metadata, 4 worker processes | ~4 | ~4 s |
+| Metadata + heuristic tools | ~68 | ~1 min 10 s |
+| Metadata + ML classifier | ~486 | ~8 min |
+| Metadata + ML, 4 worker processes | ~195 | **~3 min 15 s** |
 
 ## License
 

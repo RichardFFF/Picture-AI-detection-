@@ -39,4 +39,4 @@ def test_human_output():
 def test_missing_file_exit_code():
     proc = run_cli("does_not_exist.jpg")
     assert proc.returncode == 2
-    assert "ERROR" in proc.stderr
+    assert "No image files found" in proc.stderr

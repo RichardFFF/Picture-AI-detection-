@@ -12,14 +12,14 @@ from fastapi.responses import HTMLResponse
 
 from .detector import detect_file
 
-app = FastAPI(title="Adobe AI Image Detector")
+app = FastAPI(title="AI Image Detector")
 
 PAGE = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Adobe AI Image Detector</title>
+<title>AI Image Detector</title>
 <style>
   :root { color-scheme: light dark; }
   body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
@@ -41,12 +41,15 @@ PAGE = """<!DOCTYPE html>
 </style>
 </head>
 <body>
-<h1>Adobe AI Image Detector</h1>
-<p>Detects images created or modified with Adobe AI tools (Firefly, Photoshop
-Generative Fill) by reading their C2PA Content Credentials and XMP provenance
-metadata. Deterministic — no guessing.</p>
-<div id="drop">Drop an image here or click to choose a file
-  <input id="file" type="file" accept="image/*" hidden>
+<h1>AI Image Detector</h1>
+<p>Identifies AI-generated and AI-modified pictures by reading the provenance
+metadata generators embed — Adobe Firefly / Photoshop Generative Fill (C2PA
+Content Credentials), DALL&middot;E, Stable Diffusion, ComfyUI, NovelAI,
+InvokeAI, Midjourney — with optional durable-credential recovery, heuristic
+pixel analysis, and a statistical ML classifier. Metadata detection is
+deterministic — no guessing. Drop multiple files for batch scanning.</p>
+<div id="drop">Drop one or more images here or click to choose files
+  <input id="file" type="file" accept="image/*" multiple hidden>
 </div>
 <fieldset style="margin-top:.8rem;border:1px solid #8884;border-radius:8px;padding:.6rem .8rem;">
   <legend style="font-size:.85rem;padding:0 .3rem;">Options</legend>
@@ -77,8 +80,42 @@ drop.addEventListener("click", () => input.click());
   drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("hover"); }));
 ["dragleave", "drop"].forEach(ev =>
   drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("hover"); }));
-drop.addEventListener("drop", e => { if (e.dataTransfer.files[0]) analyze(e.dataTransfer.files[0]); });
-input.addEventListener("change", () => { if (input.files[0]) analyze(input.files[0]); });
+drop.addEventListener("drop", e => { if (e.dataTransfer.files.length) analyzeAll(e.dataTransfer.files); });
+input.addEventListener("change", () => { if (input.files.length) analyzeAll(input.files); });
+
+async function analyzeAll(files) {
+  if (files.length === 1) { analyze(files[0]); return; }
+  const counts = {};
+  result.innerHTML = "<h2>Batch scan (" + files.length + " images)</h2>"
+    + "<p id='batch-status'></p>"
+    + "<table id='batch-table'><tr><th>File</th><th>Verdict</th><th>P(AI)</th><th>Confidence</th></tr></table>";
+  const table = document.getElementById("batch-table");
+  const status = document.getElementById("batch-status");
+  const t0 = performance.now();
+  for (let i = 0; i < files.length; i++) {
+    status.textContent = "Analyzing " + (i + 1) + " / " + files.length + "…";
+    const body = new FormData();
+    body.append("file", files[i]);
+    body.append("heuristics", false);
+    body.append("durable", document.getElementById("opt-durable").checked);
+    body.append("ml", document.getElementById("opt-ml").checked);
+    try {
+      const r = await (await fetch("/api/detect", { method: "POST", body })).json();
+      counts[r.verdict] = (counts[r.verdict] || 0) + 1;
+      const ml = r.ml && r.ml.available ? r.ml : null;
+      table.insertAdjacentHTML("beforeend", "<tr><td>" + esc(files[i].name)
+        + "</td><td><span class='badge " + esc(r.verdict) + "' style='font-size:.75rem;padding:.15rem .5rem;'>"
+        + esc(r.verdict) + "</span></td><td>" + (ml ? Math.round(ml.probability_ai * 100) + "%" : "—")
+        + "</td><td>" + (ml ? esc(ml.confident_decision) : "metadata") + "</td></tr>");
+    } catch (err) {
+      table.insertAdjacentHTML("beforeend", "<tr><td>" + esc(files[i].name)
+        + "</td><td colspan='3'>error: " + esc(err) + "</td></tr>");
+    }
+  }
+  const secs = ((performance.now() - t0) / 1000).toFixed(1);
+  status.textContent = "Done: " + files.length + " images in " + secs + "s — "
+    + Object.entries(counts).map(([k, v]) => k + ": " + v).join(", ");
+}
 
 async function analyze(file) {
   result.innerHTML = "<p>Analyzing " + file.name + "…</p>";

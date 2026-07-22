@@ -14,7 +14,7 @@ client = TestClient(app)
 def test_index_serves_page():
     resp = client.get("/")
     assert resp.status_code == 200
-    assert "Adobe AI Image Detector" in resp.text
+    assert "AI Image Detector" in resp.text
 
 
 @pytest.mark.parametrize(
