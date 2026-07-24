@@ -215,6 +215,25 @@ negatives. `evaluate_set.py --ai-dir DIR --original-dir DIR` works on any two
 directories, so you can point it at your own Firefly/Photoshop exports and
 untouched photos.
 
+### Training on your own image folders
+
+Datasets hosted on HuggingFace / Kaggle / Google Drive can't be fetched from a
+network-restricted environment. Download and unzip one on your own machine,
+then point `scripts/ingest_local.py` at two folders (AI-generated and real):
+
+```bash
+python scripts/build_corpus.py                                   # optional: GitHub base corpus
+python scripts/ingest_local.py --ai-dir my_ai --real-dir my_real # add your images
+python scripts/train_ml.py                                       # retrain
+python scripts/benchmark_pipeline.py                             # measure
+```
+
+Images are tiled and augmented exactly like the base corpus, each source image
+is its own train/test group (no leakage), and small images are upscaled to one
+tile. Good commercial-safe sources: **ArtiFact_240K** (MIT — faces/animals/
+vehicles), **DiffusionDB** (CC0 — Stable Diffusion), **Unsplash Lite** (real
+photos). See `SOURCES.md`.
+
 ### The `dataset/` evaluation set
 
 `python scripts/make_dataset.py` builds a second, independent set: 8 originals
