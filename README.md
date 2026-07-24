@@ -123,12 +123,13 @@ comes from sources excluded from training):
 
 | Evaluation | Result |
 |---|---|
-| CV image-level accuracy (grouped 5-fold, ensemble) | 87.5% |
-| CV selective accuracy / coverage | 97.9% / 65% |
-| Full pipeline, forced decisions (56 images) | **89.3%** |
+| CV image-level accuracy (grouped 5-fold, ensemble) | 89.1% |
+| CV selective accuracy / coverage | 96.4% / 57% |
+| Full pipeline, forced decisions (56 images) | **87.5%** |
 | Full pipeline, selective mode | **97.8%** correct at 80% coverage |
 | — provenance/metadata-decided images | 100% |
 | — ML-holdout pool (20 unseen photos/SD images), forced | 70.0% |
+| External shoe held-out (MIT dataset, unseen), forced | **97.1%** (0 false positives) |
 
 Provenance and generator metadata decide deterministically wherever evidence
 exists; only evidence-free photographs fall through to the statistical

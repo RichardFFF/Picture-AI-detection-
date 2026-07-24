@@ -18,6 +18,7 @@ photos, ADE20K-derived inputs).
 | [pytorch/vision](https://github.com/pytorch/vision) | BSD-3 | Real class (`dog1`, `grace_hopper`); benchmark holdout `dog2` |
 | [python-pillow/Pillow](https://github.com/python-pillow/Pillow) test images | MIT-CMU (HPND) | Benchmark holdout `flower` |
 | [xinntao/Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) inputs | BSD-3 (ADE20K-derived input excluded) | Real class (`0014`); benchmark holdout (`0030`) |
+| [sunkakar/dataset-shoes-ai-generated](https://github.com/sunkakar/dataset-shoes-ai-generated) | MIT | Real class: studio product photos; AI class: Midjourney shoe renders (ML training + held-out eval) |
 | [onnx/models](https://github.com/onnx/models) | Apache-2.0 | `resnet50-v2-7.onnx` ImageNet backbone for transfer learning |
 | [adobe/trustmark](https://pypi.org/project/trustmark/) | MIT | Optional watermark decoding (durable credentials) |
 

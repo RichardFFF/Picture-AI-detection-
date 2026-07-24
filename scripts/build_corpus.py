@@ -165,6 +165,12 @@ def fetch(url: str) -> Image.Image | None:
         data = urllib.request.urlopen(url, timeout=60).read()
         img = Image.open(io.BytesIO(data)).convert("RGB")
         img.load()
+        # small source images (e.g. 240px product shots) are upscaled so their
+        # short side reaches one full 256 tile
+        w, h = img.size
+        if min(w, h) < TILE:
+            s = TILE / min(w, h)
+            img = img.resize((round(w * s), round(h * s)))
         return img
     except Exception as exc:
         print(f"warn: {url}: {exc}")
@@ -204,9 +210,29 @@ def build(sources: dict[str, str], outdir: Path) -> int:
     return n
 
 
+# sunkakar/dataset-shoes-ai-generated (MIT): real product photos vs Midjourney
+# shoe renders. Adds "clean studio background" real examples that reduced the
+# ML layer's false positives. TRAIN subset only — reals 150-199 and the AI
+# filenames below; reals 100-149 + the first 20 AI files are held out for the
+# external shoe evaluation, never trained on.
+SHOE = ("https://raw.githubusercontent.com/sunkakar/"
+        "dataset-shoes-ai-generated/main")
+SHOE_REAL = {f"shoe_real_{n}": f"{SHOE}/real/{n}.jpg" for n in range(150, 200)}
+_SHOE_AI_TRAIN = [
+    "alyhkauncce", "alzscqzftcn", "angxsddsejo", "anhjqhgobla", "anhrzbengss",
+    "anstlnrwsms", "anvarylcaiq", "anvpzrykidy", "apkofhfrhnd", "aravrolebjr",
+    "asfbvuejqhq", "asgujkesozo", "atjytvpkeoj", "atknpnhlxgr", "atpbuyajdsg",
+    "attrcbwghpr", "atzblzyrpin", "awgzozmlbjt", "axgraastudz", "axmupulvqnm",
+    "ayhslllhwpm", "ayuxwtyerva", "azcfscbrbib", "aztnzcomsyx", "bajdignqrwq",
+]
+SHOE_AI = {f"shoe_ai_{f}": f"{SHOE}/ai-midjourney/{f}.jpg" for f in _SHOE_AI_TRAIN}
+
+
 def main() -> int:
     n_ai = build(AI_SOURCES, CORPUS / "ai")
+    n_ai += build(SHOE_AI, CORPUS / "ai")
     n_real = build(REAL_SOURCES, CORPUS / "real")
+    n_real += build(SHOE_REAL, CORPUS / "real")
     print(f"\nCorpus: {n_ai} AI tiles, {n_real} real tiles in {CORPUS}")
     return 0 if n_ai and n_real else 1
 
